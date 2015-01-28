@@ -5,6 +5,7 @@ public class BasicAI : MonoBehaviour {
 
 	public Task[] tasks;
 	public GameObject[] knownCovers;
+	public GameObject[] knownEnemies;
 	public GameObject enemyTarget;
 	GameObject closestCover;
 	public Vector3 target;
@@ -12,12 +13,15 @@ public class BasicAI : MonoBehaviour {
 	public float speed;
 	public bool firstCommand;
 	public float distanceToCover;
+	public float distanceToEnemy;
+	public bool seeking;
 
 	// Use this for initialization
 	void Start () 
 	{
 		//Test
 		PopulateKnownCovers ();
+		PopulateKnownEnemies ();
 		closestCover = null;
 		speed = 30.0f;
 		distanceToCover = 0;
@@ -26,20 +30,29 @@ public class BasicAI : MonoBehaviour {
 
 	protected void Seek(Vector3 targetPos)
 	{
-		float z = Mathf.Atan2 ((targetPos.y - transform.position.y), 
-		                      (targetPos.x - transform.position.x)) * Mathf.Rad2Deg - 90;
-
-		transform.eulerAngles = new Vector3 (0, 0, z);
-
-		rigidbody2D.AddForce (gameObject.transform.up * speed);
-
-		distanceToCover = Vector3.Distance(transform.position, targetPos);
-
-		if(distanceToCover < 5.0f)
+		if(Vector3.Distance(transform.position,targetPos) > 3.0f)
 		{
-			firstCommand = true;
-			inCover = true;
-			//Add AI to cover list, using closestcover gameobject as a ref
+			seeking = true;
+			float z = Mathf.Atan2 ((targetPos.y - transform.position.y), 
+			                      (targetPos.x - transform.position.x)) * Mathf.Rad2Deg - 90;
+
+			transform.eulerAngles = new Vector3 (0, 0, z);
+
+			rigidbody2D.AddForce (gameObject.transform.up * speed);
+
+			distanceToCover = Vector3.Distance(transform.position, targetPos);
+
+			if(distanceToCover < 5.0f)
+			{
+				firstCommand = true;
+				inCover = true;
+				//Add AI to cover list, using closestcover gameobject as a ref
+			}
+		}
+		else
+		{
+			seeking = false;
+			print("No longer seeking");
 		}
 	}
 
@@ -47,13 +60,7 @@ public class BasicAI : MonoBehaviour {
 	{
 
 		BoxCollider2D coverCollider = closestCover.gameObject.GetComponent<BoxCollider2D>();
-
-		//Need rotation maybe cosx and siny testing  0 deg now
-		//Works for horizontal covers
-		//Vector2 p1 = closestCover.transform.position - new Vector3((coverCollider.size.x / 2),0,0);
-		//Vector2 p2 = closestCover.transform.position + new Vector3((coverCollider.size.x / 2),0,0);
-
-		//Testing Angled Covers WORKS!
+		
 		Vector2 p1 = closestCover.transform.position - new Vector3(((Mathf.Cos(closestCover.transform.rotation.z) * coverCollider.size.x / 2)),(Mathf.Sin(closestCover.transform.rotation.z) * coverCollider.size.x / 2),0);
 		Vector2 p2 = closestCover.transform.position + new Vector3(((Mathf.Cos(closestCover.transform.rotation.z) * coverCollider.size.x / 2)),(Mathf.Sin(closestCover.transform.rotation.z) * coverCollider.size.x / 2),0);
 
@@ -69,7 +76,6 @@ public class BasicAI : MonoBehaviour {
 
 			print("Chose Right Side");
 		}
-
 	}
 
 	void PopulateKnownCovers()
@@ -77,9 +83,31 @@ public class BasicAI : MonoBehaviour {
 		knownCovers = GameObject.FindGameObjectsWithTag("Cover");
 	}
 
+	void PopulateKnownEnemies()
+	{
+		knownEnemies = GameObject.FindGameObjectsWithTag ("Enemy");
+	}
+
+	void SetEnemyTarget()
+	{
+		float lastDistance = 10000.0f;
+		
+		for(int i = 0; i < knownEnemies.Length; i++)
+		{
+			distanceToEnemy = Vector3.Distance(transform.position, knownEnemies[i].transform.position);
+			
+			if( distanceToEnemy < lastDistance )
+			{
+				enemyTarget = knownEnemies[i];
+			}
+			
+			//print (knownCovers[i] + " " + distance);
+			lastDistance = distanceToEnemy;
+		}
+	}
+
 	void SetCoverTarget()
 	{
-
 		print ("Setting Cover");
 		float lastDistance = 10000.0f;
 
